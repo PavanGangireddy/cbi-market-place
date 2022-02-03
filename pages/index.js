@@ -10,9 +10,12 @@ import { nftaddress, nftmarketaddress } from "../config";
 
 import Market from "../artifacts/contracts/Market.sol/NFTMarket.json";
 import { MarketPlaceStoreContext } from "../context/MarketPlaceStoreContext";
+import { WalletStoreContext } from "../context/WalletStoreContext";
 
 const Home = observer(() => {
   const marketPlaceStore = useContext(MarketPlaceStoreContext);
+  const walletStore = useContext(WalletStoreContext);
+
   const {
     getMarketPlaceItemsOnSale,
     itemsOnSale,
@@ -25,26 +28,30 @@ const Home = observer(() => {
     getMarketPlaceItemsOnSale();
   }, []);
 
-  async function buyNft(nft) {
-    /* needs the user to sign the transaction, so will use Web3Provider and sign it */
-    const web3Modal = new Web3Modal();
-    const connection = await web3Modal.connect();
-    const provider = new ethers.providers.Web3Provider(connection);
-    const signer = provider.getSigner();
+  const buyNft = async (nft) => {
+    // TODO: Optimise this after WalletStore state is changed
+    const { connectAppToWallet, isConnected } = walletStore;
+    const signer = await connectAppToWallet();
+    console.log("🚀 ~ file: index.js ~ line 35 ~ buyNft ~ signer", signer);
     const contract = new ethers.Contract(nftmarketaddress, Market.abi, signer);
 
     /* user will be prompted to pay the asking proces to complete the transaction */
     const price = ethers.utils.parseUnits(nft.price.toString(), "ether");
-    const transaction = await contract.createMarketSale(
-      nftaddress,
-      nft.tokenId.toString(),
-      {
-        value: price,
-      }
-    );
-    await transaction.wait();
-    getMarketPlaceItemsOnSale();
-  }
+    console.log("🚀 ~ file: index.js ~ line 39 ~ buyNft ~ price", price);
+    if (signer !== undefined) {
+      const transaction = await contract.createMarketSale(
+        nftaddress,
+        nft.itemId,
+        {
+          value: price,
+        }
+      );
+      await transaction.wait();
+      getMarketPlaceItemsOnSale();
+    } else {
+      alert("wallet not connected");
+    }
+  };
 
   const fetchMore = () => {
     const updatedPage = currentPage + 1;

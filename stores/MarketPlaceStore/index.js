@@ -58,7 +58,7 @@ class MarketPlaceStore {
         let price = ethers.utils.formatUnits(i.price.toString(), "ether");
         let item = {
           price,
-          tokenId: Number(i.tokenId),
+          itemId: Number(i.itemId),
           seller: i.seller,
           owner: i.owner,
           image: meta.data.image,
