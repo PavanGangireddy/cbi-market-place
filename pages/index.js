@@ -37,7 +37,7 @@ const Home = observer(() => {
     const price = ethers.utils.parseUnits(nft.price.toString(), "ether");
     const transaction = await contract.createMarketSale(
       nftaddress,
-      nft.tokenId,
+      nft.tokenId.toString(),
       {
         value: price,
       }
