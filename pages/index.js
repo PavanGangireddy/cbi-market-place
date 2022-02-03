@@ -1,6 +1,6 @@
 /* pages/index.js */
 import { ethers } from "ethers";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import Web3Modal from "web3modal";
 
@@ -8,6 +8,8 @@ import { nftaddress, nftmarketaddress } from "../config";
 
 import NFT from "../artifacts/contracts/NFT.sol/NFT.json";
 import Market from "../artifacts/contracts/Market.sol/NFTMarket.json";
+
+import { WalletStoreContext } from "../context/WalletStoreContext";
 
 export default function Home() {
   const [nfts, setNfts] = useState([]);
@@ -52,25 +54,32 @@ export default function Home() {
     setNfts(items);
     setLoadingState("loaded");
   }
+  const walletStore = useContext(WalletStoreContext);
   async function buyNft(nft) {
+    const { connectAppToWallet, signer, isConnected } = walletStore;
     /* needs the user to sign the transaction, so will use Web3Provider and sign it */
-    const web3Modal = new Web3Modal();
-    const connection = await web3Modal.connect();
-    const provider = new ethers.providers.Web3Provider(connection);
-    const signer = provider.getSigner();
-    const contract = new ethers.Contract(nftmarketaddress, Market.abi, signer);
+    // const web3Modal = new Web3Modal();
+    // const connection = await web3Modal.connect();
+    // const provider = new ethers.providers.Web3Provider(connection);
+    // const signer = provider.getSigner();
+    const signer1 = await connectAppToWallet();
+    const contract = new ethers.Contract(nftmarketaddress, Market.abi, signer1);
 
     /* user will be prompted to pay the asking proces to complete the transaction */
     const price = ethers.utils.parseUnits(nft.price.toString(), "ether");
-    const transaction = await contract.createMarketSale(
-      nftaddress,
-      nft.tokenId,
-      {
-        value: price,
-      }
-    );
-    await transaction.wait();
-    loadNFTs();
+    if (signer1 !== undefined) {
+      const transaction = await contract.createMarketSale(
+        nftaddress,
+        nft.tokenId,
+        {
+          value: price,
+        }
+      );
+      await transaction.wait();
+      loadNFTs();
+    } else {
+      alert("wallet not connected");
+    }
   }
   if (loadingState === "loaded" && !nfts.length)
     return <h1 className="px-20 py-10 text-3xl">No items in marketplace</h1>;
