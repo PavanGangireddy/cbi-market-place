@@ -1,33 +1,33 @@
 /* pages/create-item.js */
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { ethers } from "ethers";
-import { create as ipfsHttpClient } from "ipfs-http-client";
 import { useRouter } from "next/router";
-import Web3Modal from "web3modal";
-
-const client = ipfsHttpClient("https://ipfs.infura.io:5001/api/v0");
+import { observer } from "mobx-react-lite";
 
 import { nftaddress, nftmarketaddress } from "../config";
+import Web3Modal from "web3modal";
 
 import NFT from "../artifacts/contracts/NFT.sol/NFT.json";
 import Market from "../artifacts/contracts/Market.sol/NFTMarket.json";
+import { NFTStoreContext } from "../context/NFTStoreContext";
 
-export default function CreateItem() {
+import { getIpfsUrl } from "../utils/ipfsClientUtils";
+
+const CreateItem = observer(() => {
   const [fileUrl, setFileUrl] = useState(null);
   const [formInput, updateFormInput] = useState({
     price: "",
     name: "",
     description: "",
   });
+  const nftStore = useContext(NFTStoreContext);
+  const { createNFT, latestCreatedTokenId } = nftStore;
   const router = useRouter();
 
   async function onChange(e) {
     const file = e.target.files[0];
     try {
-      const added = await client.add(file, {
-        progress: (prog) => console.log(`received: ${prog}`),
-      });
-      const url = `https://ipfs.infura.io/ipfs/${added.path}`;
+      const url = await getIpfsUrl(file);
       setFileUrl(url);
     } catch (error) {
       console.log("Error uploading file: ", error);
@@ -53,34 +53,28 @@ export default function CreateItem() {
   }
 
   async function createSale(url) {
+    await createNFT(url);
+    const price = ethers.utils.parseUnits(formInput.price, "ether");
+
+    // TODO: get Signer and provider from utils
     const web3Modal = new Web3Modal();
     const connection = await web3Modal.connect();
     const provider = new ethers.providers.Web3Provider(connection);
     const signer = provider.getSigner();
 
-    /* next, create the item */
-    let contract = new ethers.Contract(nftaddress, NFT.abi, signer);
-    let transaction = await contract.createToken(url);
-    let tx = await transaction.wait();
-    console.log("🚀 ~ file: create-item.js ~ line 65 ~ createSale ~ tx", tx);
-    let event = tx.events[0];
-    console.log(
-      "🚀 ~ file: create-item.js ~ line 66 ~ createSale ~ event",
-      event
-    );
-
-    let value = event.args[2];
-    let tokenId = value.toNumber();
-    const price = ethers.utils.parseUnits(formInput.price, "ether");
-
     /* then list the item for sale on the marketplace */
-    contract = new ethers.Contract(nftmarketaddress, Market.abi, signer);
+    let contract = new ethers.Contract(nftmarketaddress, Market.abi, signer);
     let listingPrice = await contract.getListingPrice();
     listingPrice = listingPrice.toString();
 
-    transaction = await contract.createMarketItem(nftaddress, tokenId, price, {
-      value: listingPrice,
-    });
+    let transaction = await contract.createMarketItem(
+      nftaddress,
+      latestCreatedTokenId,
+      price,
+      {
+        value: listingPrice,
+      }
+    );
     await transaction.wait();
     router.push("/");
   }
@@ -120,4 +114,6 @@ export default function CreateItem() {
       </div>
     </div>
   );
-}
+});
+
+export default CreateItem;

@@ -9,11 +9,12 @@ import { nftmarketaddress, nftaddress } from "../config";
 import Market from "../artifacts/contracts/Market.sol/NFTMarket.json";
 import NFT from "../artifacts/contracts/NFT.sol/NFT.json";
 import {
-  fetchFirstFiveTokens,
-  fetchPaginatedTokens,
+  nftService,
   MAX_PAGE_SIZE,
   MAX_NFT_ITEMS_PER_PAGE,
-} from "./services/nftService";
+} from "../services/NFTService";
+
+const { fetchPaginatedTokens } = nftService;
 
 export default function MyAssets() {
   const [nfts, setNfts] = useState([]);
