@@ -1,57 +1,30 @@
 /* pages/index.js */
 import { ethers } from "ethers";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import Web3Modal from "web3modal";
+import { observer } from "mobx-react-lite";
 
+import { MAX_NFT_ITEMS_PER_PAGE } from "../constants/marketPlaceUIConstants";
 import { nftaddress, nftmarketaddress } from "../config";
 
-import NFT from "../artifacts/contracts/NFT.sol/NFT.json";
 import Market from "../artifacts/contracts/Market.sol/NFTMarket.json";
+import { MarketPlaceStoreContext } from "../context/MarketPlaceStoreContext";
 
-export default function Home() {
-  const [nfts, setNfts] = useState([]);
-  const [loadingState, setLoadingState] = useState("not-loaded");
+const Home = observer(() => {
+  const marketPlaceStore = useContext(MarketPlaceStoreContext);
+  const {
+    getMarketPlaceItemsOnSale,
+    itemsOnSale,
+    itemsOnSaleLoadingStatus,
+    setCurrentPage,
+    currentPage,
+  } = marketPlaceStore;
+
   useEffect(() => {
-    loadNFTs();
+    getMarketPlaceItemsOnSale();
   }, []);
-  async function loadNFTs() {
-    /* create a generic provider and query for unsold market items */
-    const provider = new ethers.providers.JsonRpcProvider(
-      "https://rpc-mumbai.maticvigil.com"
-    );
-    const tokenContract = new ethers.Contract(nftaddress, NFT.abi, provider);
-    const marketContract = new ethers.Contract(
-      nftmarketaddress,
-      Market.abi,
-      provider
-    );
-    const data = await marketContract.fetchMarketItems();
 
-    /*
-     *  map over items returned from smart contract and format
-     *  them as well as fetch their token metadata
-     */
-    const items = await Promise.all(
-      data.map(async (i) => {
-        const tokenUri = await tokenContract.tokenURI(i.tokenId);
-        const meta = await axios.get(tokenUri);
-        let price = ethers.utils.formatUnits(i.price.toString(), "ether");
-        let item = {
-          price,
-          tokenId: i.tokenId.toNumber(),
-          seller: i.seller,
-          owner: i.owner,
-          image: meta.data.image,
-          name: meta.data.name,
-          description: meta.data.description,
-        };
-        return item;
-      })
-    );
-    setNfts(items);
-    setLoadingState("loaded");
-  }
   async function buyNft(nft) {
     /* needs the user to sign the transaction, so will use Web3Provider and sign it */
     const web3Modal = new Web3Modal();
@@ -70,15 +43,27 @@ export default function Home() {
       }
     );
     await transaction.wait();
-    loadNFTs();
+    getMarketPlaceItemsOnSale();
   }
-  if (loadingState === "loaded" && !nfts.length)
+
+  const fetchMore = () => {
+    const updatedPage = currentPage + 1;
+    const offset = updatedPage * MAX_NFT_ITEMS_PER_PAGE;
+
+    const limit = MAX_NFT_ITEMS_PER_PAGE;
+
+    getMarketPlaceItemsOnSale(limit, offset);
+    setCurrentPage(updatedPage);
+  };
+
+  if (itemsOnSaleLoadingStatus === false && !itemsOnSale.length)
     return <h1 className="px-20 py-10 text-3xl">No items in marketplace</h1>;
   return (
     <div className="flex justify-center">
       <div className="px-4" style={{ maxWidth: "1600px" }}>
+        <p>Current Page: {currentPage}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-          {nfts.map((nft, i) => (
+          {itemsOnSale.map((nft, i) => (
             <div key={i} className="border shadow rounded-xl overflow-hidden">
               <img src={nft.image} />
               <div className="p-4">
@@ -105,8 +90,22 @@ export default function Home() {
               </div>
             </div>
           ))}
+          {itemsOnSaleLoadingStatus ? (
+            <>
+              <div className="bg-blend-normal" />
+              <h1>Loading</h1>
+            </>
+          ) : null}
         </div>
+        <button
+          onClick={fetchMore}
+          className="font-bold mt-4 bg-pink-500 text-white rounded p-4 shadow-lg"
+        >
+          Load More
+        </button>
       </div>
     </div>
   );
-}
+});
+
+export default Home;

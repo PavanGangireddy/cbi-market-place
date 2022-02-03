@@ -43,8 +43,7 @@ const CreateItem = observer(() => {
       image: fileUrl,
     });
     try {
-      const added = await client.add(data);
-      const url = `https://ipfs.infura.io/ipfs/${added.path}`;
+      const url = await getIpfsUrl(data);
       /* after file is uploaded to IPFS, pass the URL to save it on Polygon */
       createSale(url);
     } catch (error) {

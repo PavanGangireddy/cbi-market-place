@@ -5,13 +5,14 @@ import { ethers } from "ethers";
 import { nftaddress, nftmarketaddress } from "../../config";
 import NFT from "../../artifacts/contracts/NFT.sol/NFT.json";
 
+// TODO: Integrate BuyNFT Flow
 class NFTStore {
   nftService;
-  isNFTCreating;
+  nftCreatingStatus;
   tokenIds = [];
   constructor(nftService) {
     makeObservable(this, {
-      isNFTCreating: observable,
+      nftCreatingStatus: observable,
       createNFT: action.bound,
       tokenIds: observable,
       setNFTCreatingStatus: action.bound,
@@ -45,7 +46,7 @@ class NFTStore {
     const signer = provider.getSigner();
     let contract = new ethers.Contract(nftaddress, NFT.abi, signer);
 
-    const tokenId = await this.nftService.createNFT(contract, url, signer);
+    const tokenId = await this.nftService.createNFT(contract, url);
 
     this.setNFTCreatingStatus(false);
     this.updateCreatedTokenIds(tokenId);
