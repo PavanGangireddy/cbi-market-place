@@ -22,4 +22,6 @@ npx hardhat help
   - first & Skip difference
   - Can use Pagination store we have in mobx
 - Get to know what was separted out as decentraland-dapps package
--
+- Converting all api calls with services and adding stores
+- Seperated out Transactions inside lib
+- Seperated out ChainUtils inside lib

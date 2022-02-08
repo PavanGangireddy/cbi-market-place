@@ -16,7 +16,7 @@ import {
 // address: computed,
 
 class WalletStore {
-  isConnected;
+  isConnected = false;
   isConnecting;
   error;
   network;
@@ -73,7 +73,18 @@ class WalletStore {
   setSigner(signer) {
     this.signer = signer;
   }
-
+  // ConnectWalletRequest - action
+  // Handle Success or failure of FetchWalletRequest
+  // FetchWalletRequest - action
+  // success - wallet -
+  /*
+    address: "0xc1ecc681e260fdf5a541e69b58948b7c14e82e11"
+    chainId: 80001
+    network: "MATIC"
+    networks: {ETHEREUM: {…}, MATIC: {…}}
+    providerType: "injected"
+  */
+  // failure - ConnectWalletRequest failure action trigger
   async connectAppToWallet() {
     this.setIsConnecting(true);
     try {
